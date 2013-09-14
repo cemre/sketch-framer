@@ -5,13 +5,7 @@ log("################ start");
 _ = {}
 
 _.each = function(items, iterator) {
-  for(var i=0; i<items.length(); i++) {
-    iterator.call(this, items[i]);
-  }
-}
-
-_.eachArr = function(items, iterator) {
-  for(var i=0; i<items.length; i++) {
+  for(var i=([items length] - 1); i >= 0; i--) {
     iterator.call(this, items[i]);
   }
 }
@@ -42,8 +36,53 @@ isGroup = function(layer) {
   return layer.isMemberOfClass_(MSLayerGroup.class()) || layer.isMemberOfClass_(MSArtboardGroup.class()) || layer.isMemberOfClass_(MSPage.class());
 }
 
+forceGroup = function(layer) {
+  var name = [layer name];
+
+  if (name.slice(-1) == "+") {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 isVisible = function(layer) {
-  return true;
+  return [layer isVisible];
+}
+
+hasArtSublayers = function(layer) {
+  if(isGroup(layer)) {
+    var r = false;
+    _.each([layer layers], function(it) {
+      if(!isGroup(it)) {
+        sysLog("       hasArtSublayers: found art " + [it name])
+        r = true;
+      }
+    });
+    return r;
+  } else {
+    sysLog("       hasArtSublayers: not a group " + [layer name]);
+    return false;
+  }
+}
+
+hasSubgroups = function(layer) {
+  if(isGroup(layer)) {
+    var r = false;
+    _.each([layer layers], function(it) {
+      if(isGroup(it)) {
+        sysLog("       hasSubgroups: found a group in " + [layer name] + ">" + [it name]);
+        r = true;
+      }
+    });
+    return r;
+  } else if(forceGroup(layer)) {
+    sysLog("       hasSubgroups: forcing group " + [layer name]);
+    return true;
+  } else {
+    sysLog("       hasSubgroups: not a group " + [layer name]);
+    return false;
+  }
 }
 
 log_layer = function(layer, depth) {
@@ -54,41 +93,53 @@ log_layer = function(layer, depth) {
   log(padding + " " + layer.name());
 }
 
-traverse = function(currentLayer, depth) {
-  log_layer(currentLayer, depth);
+sysLog = function(msg) {
+  log(msg);
+}
 
-  if(!isGroup(currentLayer)) {
-    log("ng");
-  } else {
-
-    var subLayers = currentLayer.layers();
-
-    var subGroupLayers = _.filter(subLayers, function(layer) {
-      isGroup(layer);
+exportArt = function(layer) {
+  if(isGroup(layer)) {
+    _.each([layer layers], function(it) {
+      if(!isGroup(it) && !forceGroup(it)) {
+        sysLog("       exportArt: " + [layer name] + "."+ [it name])
+      }
     });
-    log(subGroupLayers.length);
-
-    _.eachArr(subGroupLayers, function(layer) {
-      traverse(layer, depth + 1);
-    });
-    log("1");
-
-    var subArtLayers = _.filter(subLayers, function(layer) {
-      !isGroup(layer);
-    });
-    log("1");
-
-    _.eachArr(subArtLayers, function(layer) {
-      traverse(layer, depth + 5);
-    });
-    log("1");
-
-
-    _.each(subLayers, function(layer) {
-      traverse(layer, depth + 5);
-    });
-
   }
+
+  sysLog("       exportArt: " + [layer name] + " done");
+}
+
+traverse = function(currentLayer, depth) {
+  if(!isGroup(currentLayer)) {
+
+    sysLog("    " +[currentLayer name] + " exporting as a view forcefully - not traversing");
+
+  } else {
+    _.each(currentLayer.layers(), function(layer) {
+      if(!isVisible(layer)) {
+        return;
+      }
+
+      log_layer(layer, depth);
+
+      exportArt(layer);
+
+      if(hasSubgroups(layer)) {
+        // Has subgroups, so traverse and export them.
+        sysLog("    " +[layer name] + " traversing subgroups");
+
+        traverse(layer, depth+1);
+      }
+
+
+
+    });
+  }
+
+
+
+
+
 }
 
 traverse(doc.currentPage(), 0);
