@@ -1,0 +1,99 @@
+// Sketch Framer draft (ctrl alt command g)
+
+log("################ start");
+
+_ = {}
+
+_.each = function(items, iterator) {
+  for(var i=0; i<items.length(); i++) {
+    iterator.call(this, items[i]);
+  }
+}
+
+_.eachArr = function(items, iterator) {
+  for(var i=0; i<items.length; i++) {
+    iterator.call(this, items[i]);
+  }
+}
+
+
+// _.filter = function(obj, iterator) {
+//   var results = [];
+//   if (obj == null) return results;
+//   _.each(obj, function(value) {
+//     if (iterator.call(this, value)) {
+//       results.push(value);
+//     }
+//   });
+//   return results;
+// };
+
+// _.map = function(obj, iterator) {
+//   log("map");
+//   var results = [];
+//   if (obj == null) return results;
+//   _.each(obj, function(value) {
+//     results.push(iterator.call(this, value));
+//   });
+//   return results;
+// };
+
+isGroup = function(layer) {
+  return layer.isMemberOfClass_(MSLayerGroup.class()) || layer.isMemberOfClass_(MSArtboardGroup.class()) || layer.isMemberOfClass_(MSPage.class());
+}
+
+isVisible = function(layer) {
+  return true;
+}
+
+log_layer = function(layer, depth) {
+  var padding = "";
+  for(var i=0; i<depth; i++) {
+    padding = padding + ">"
+  }
+  log(padding + " " + layer.name());
+}
+
+traverse = function(currentLayer, depth) {
+  log_layer(currentLayer, depth);
+
+  if(!isGroup(currentLayer)) {
+    log("ng");
+  } else {
+
+    var subLayers = currentLayer.layers();
+
+    var subGroupLayers = _.filter(subLayers, function(layer) {
+      isGroup(layer);
+    });
+    log(subGroupLayers.length);
+
+    _.eachArr(subGroupLayers, function(layer) {
+      traverse(layer, depth + 1);
+    });
+    log("1");
+
+    var subArtLayers = _.filter(subLayers, function(layer) {
+      !isGroup(layer);
+    });
+    log("1");
+
+    _.eachArr(subArtLayers, function(layer) {
+      traverse(layer, depth + 5);
+    });
+    log("1");
+
+
+    _.each(subLayers, function(layer) {
+      traverse(layer, depth + 5);
+    });
+
+  }
+}
+
+traverse(doc.currentPage(), 0);
+
+
+
+
+log("################ end");
